@@ -20,7 +20,7 @@
 pub mod cards;
 pub mod clock;
 pub mod demo;
-mod digits;
+pub mod digits;
 pub mod events;
 pub mod lake;
 pub mod news;

@@ -4,8 +4,8 @@
 use anyhow::Result;
 use glowdots::Sprite;
 
-/// The digits, drawn by tools/big_digits.py at 8 px per dot.
-pub(crate) const DIGITS: [&[u8]; 10] = [
+/// The digit PNGs, drawn by tools/big_digits.py at 8 px per dot.
+const DIGITS: [&[u8]; 10] = [
     include_bytes!("../assets/fonts/digits/0.png"),
     include_bytes!("../assets/fonts/digits/1.png"),
     include_bytes!("../assets/fonts/digits/2.png"),
@@ -17,7 +17,7 @@ pub(crate) const DIGITS: [&[u8]; 10] = [
     include_bytes!("../assets/fonts/digits/8.png"),
     include_bytes!("../assets/fonts/digits/9.png"),
 ];
-pub(crate) const COLON: &[u8] = include_bytes!("../assets/fonts/digits/colon.png");
+const COLON: &[u8] = include_bytes!("../assets/fonts/digits/colon.png");
 
 /// The digits 0 to 9.
 pub fn big() -> Result<Vec<Sprite>> {
