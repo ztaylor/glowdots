@@ -1,6 +1,6 @@
 # Writing scenes
 
-A scene is a type that implements [`Scene`](https://docs.rs/glowdots/latest/glowdots/trait.Scene.html). The deck calls it once when it comes around (`enter`) and then once a frame (`update`), and asks how long it stays (`duration`). Everything else has a default.
+A scene is a type that implements [`Scene`](https://docs.rs/glowdots/latest/glowdots/scene/trait.Scene.html). The deck calls it once when it comes around (`enter`) and then once a frame (`update`), and asks how long it stays (`duration`). Everything else has a default.
 
 ```rust
 use glowdots::{Context, Frame, Scene, Transition, MAX};
