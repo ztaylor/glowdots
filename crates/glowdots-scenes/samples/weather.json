@@ -1,0 +1,20 @@
+{
+  "now": {"temp_f": 61, "feels_f": 61, "icon": "partly_cloudy", "is_day": true, "wind_mph": 9, "gust_mph": 17, "wind_dir": "WSW"},
+  "today": {"high_f": 66, "low_f": 47, "icon": "partly_cloudy", "sunrise": "7:21 AM", "sunset": "6:41 PM"},
+  "tomorrow": {"high_f": 58, "low_f": 44, "icon": "rain", "sunrise": "7:22 AM", "sunset": "6:39 PM"},
+  "next_12h": [
+    {"time": "3 PM", "temp_f": 64, "icon": "partly_cloudy", "precip_chance_pct": 5},
+    {"time": "4 PM", "temp_f": 65, "icon": "partly_cloudy", "precip_chance_pct": 5},
+    {"time": "5 PM", "temp_f": 63, "icon": "cloudy", "precip_chance_pct": 10},
+    {"time": "6 PM", "temp_f": 60, "icon": "cloudy", "precip_chance_pct": 20},
+    {"time": "7 PM", "temp_f": 57, "icon": "cloudy", "precip_chance_pct": 30},
+    {"time": "8 PM", "temp_f": 55, "icon": "rain", "precip_chance_pct": 45},
+    {"time": "9 PM", "temp_f": 54, "icon": "rain", "precip_chance_pct": 60},
+    {"time": "10 PM", "temp_f": 53, "icon": "rain", "precip_chance_pct": 65},
+    {"time": "11 PM", "temp_f": 52, "icon": "rain", "precip_chance_pct": 55},
+    {"time": "12 AM", "temp_f": 51, "icon": "rain", "precip_chance_pct": 40},
+    {"time": "1 AM", "temp_f": 50, "icon": "cloudy", "precip_chance_pct": 25},
+    {"time": "2 AM", "temp_f": 49, "icon": "cloudy", "precip_chance_pct": 15}
+  ],
+  "alerts": []
+}

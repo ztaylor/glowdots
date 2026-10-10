@@ -1,0 +1,8 @@
+{
+  "items": [
+    {"league": "MLB", "away": "Dodgers", "home": "Braves", "time": "5:08 PM", "channel": "FS1", "note": "NLDS Game 3"},
+    {"league": "NHL", "away": "Rangers", "home": "Bruins", "time": "6:00 PM", "channel": "TNT"},
+    {"league": "NFL", "away": "Chiefs", "home": "Bills", "time": "7:15 PM", "channel": "ESPN"},
+    {"league": "F1", "title": "United States Grand Prix Practice", "time": "4:30 PM", "channel": "ESPN2"}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "status": "warn",
+  "checks": [
+    {"group": "System", "name": "CPU", "status": "ok", "detail": "12% busy"},
+    {"group": "System", "name": "Disk", "status": "ok", "detail": "41% used"},
+    {"group": "System", "name": "Memory", "status": "ok", "detail": "2.1 GB free"},
+    {"group": "Jobs", "name": "Backup", "status": "ok", "detail": "ran at 3:00 AM"},
+    {"group": "Jobs", "name": "Nightly build", "status": "warn", "detail": "Last good run was 26 hours ago"},
+    {"group": "Jobs", "name": "Photo sync", "status": "ok", "detail": "ran 12 minutes ago"},
+    {"group": "Feeds", "name": "Weather", "status": "ok", "detail": "updated 4 minutes ago"},
+    {"group": "Feeds", "name": "News", "status": "ok", "detail": "updated 1 hour ago"},
+    {"group": "Feeds", "name": "Events", "status": "ok", "detail": "updated this morning"}
+  ]
+}

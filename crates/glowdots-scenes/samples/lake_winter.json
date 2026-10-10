@@ -1,0 +1,12 @@
+{
+  "ice": true,
+  "ice_since": "2026-12-13",
+  "pressure": {"now_inhg": 30.31, "change_past_6h_inhg": 0.05, "trend_past_6h": "rising slowly"},
+  "windows": [
+    {"kind": "Dawn", "day": "Tomorrow", "start": "7:48 AM", "wind_mph": 4, "wind_dir": "NW", "cloud_pct": 20, "temp_f": 2, "icon": "clear"},
+    {"kind": "Dusk", "day": "Today", "start": "4:39 PM", "wind_mph": 9, "wind_dir": "NW", "cloud_pct": 30, "temp_f": 11, "icon": "clear"}
+  ],
+  "moon": {"phase": "Full moon", "illum_pct": 99, "days_to_full": 0, "days_to_new": 15},
+  "sunrise_today": "7:47 AM",
+  "sunset_today": "4:34 PM"
+}

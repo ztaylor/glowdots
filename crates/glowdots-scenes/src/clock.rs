@@ -13,21 +13,6 @@ const GAP: i32 = 2;
 const TOP: i32 = 2;
 const ROLL_SECONDS: f32 = 0.35;
 
-/// The digits, drawn by tools/big_digits.py at 8 px per dot.
-const DIGITS: [&[u8]; 10] = [
-    include_bytes!("../assets/fonts/digits/0.png"),
-    include_bytes!("../assets/fonts/digits/1.png"),
-    include_bytes!("../assets/fonts/digits/2.png"),
-    include_bytes!("../assets/fonts/digits/3.png"),
-    include_bytes!("../assets/fonts/digits/4.png"),
-    include_bytes!("../assets/fonts/digits/5.png"),
-    include_bytes!("../assets/fonts/digits/6.png"),
-    include_bytes!("../assets/fonts/digits/7.png"),
-    include_bytes!("../assets/fonts/digits/8.png"),
-    include_bytes!("../assets/fonts/digits/9.png"),
-];
-const COLON: &[u8] = include_bytes!("../assets/fonts/digits/colon.png");
-
 pub struct Clock {
     digits: Vec<Sprite>,
     colon: Sprite,
@@ -39,8 +24,8 @@ pub struct Clock {
 
 impl Clock {
     pub fn new() -> Result<Self> {
-        let digits = DIGITS.iter().map(|png| Sprite::art_from_bytes(png)).collect::<Result<_>>()?;
-        let colon = Sprite::art_from_bytes(COLON)?;
+        let digits = crate::digits::big()?;
+        let colon = crate::digits::colon()?;
         Ok(Self { digits, dim_colon: colon.capped(1), colon, text: Vec::new(), rolls: Vec::new() })
     }
 

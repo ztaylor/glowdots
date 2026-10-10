@@ -1,0 +1,8 @@
+{
+  "items": [
+    {"title": "The Midnight Owls", "venue": "The Orpheum Theatre", "time": "8:00 PM", "category": "Music"},
+    {"title": "Film Festival: Opening Night Gala", "venue": "Riverside Cinema", "time": "7:00 PM", "category": "Film"},
+    {"title": "Night Market", "venue": "Old Town Square", "time": "5:30 PM", "category": "Food"},
+    {"title": "Improv in the Basement", "venue": "The Basement Stage", "time": "9:30 PM", "category": "Comedy"}
+  ]
+}

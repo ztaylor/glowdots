@@ -15,6 +15,8 @@ glowdots: a 1990s pinball dot matrix display, with example scenes.
   --shades N              panel shades, 2..16 (default 4)
   --rotate N              quarter turns of the panel (0..3)
   --fullscreen            fill the screen (F toggles it while running)
+  --kiosk                 full screen through SDL, for a Raspberry Pi with
+                          no desktop (build with --features sdl)
   --now \"YYYY-MM-DD HH:MM\" pretend it is this time
   --screenshot OUT.png    save the frame at --time seconds, then stop
   --gif OUT.gif           record --seconds of play from --time, then stop
@@ -34,6 +36,7 @@ struct Args {
     shades: u8,
     rotate: u32,
     fullscreen: bool,
+    kiosk: bool,
     now: Option<String>,
     screenshot: Option<PathBuf>,
     gif: Option<PathBuf>,
@@ -53,6 +56,7 @@ fn parse_args() -> Result<Args> {
         shades: 4,
         rotate: 0,
         fullscreen: false,
+        kiosk: false,
         now: None,
         screenshot: None,
         gif: None,
@@ -80,6 +84,7 @@ fn parse_args() -> Result<Args> {
             "--shades" => a.shades = value()?.parse()?,
             "--rotate" => a.rotate = value()?.parse()?,
             "--fullscreen" => a.fullscreen = true,
+            "--kiosk" => a.kiosk = true,
             "--now" => a.now = Some(value()?),
             "--screenshot" => a.screenshot = Some(value()?.into()),
             "--gif" => a.gif = Some(value()?.into()),
@@ -152,6 +157,12 @@ fn main() -> Result<()> {
             }
             Ok(())
         });
+    }
+    if args.kiosk {
+        #[cfg(feature = "sdl")]
+        return glowdots::sdl::run(player, Default::default());
+        #[cfg(not(feature = "sdl"))]
+        bail!("--kiosk needs SDL: build with --features sdl");
     }
     app::run(player, Options { fullscreen: args.fullscreen, ..Default::default() })
 }

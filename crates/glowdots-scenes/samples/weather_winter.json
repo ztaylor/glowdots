@@ -1,0 +1,7 @@
+{
+  "now": {"temp_f": 9, "feels_f": -6, "icon": "snow", "is_day": false, "wind_mph": 12, "gust_mph": 21, "wind_dir": "NW"},
+  "today": {"high_f": 14, "low_f": -3, "icon": "snow", "sunrise": "7:47 AM", "sunset": "4:34 PM"},
+  "tomorrow": {"high_f": 8, "low_f": -9, "icon": "clear", "sunrise": "7:48 AM", "sunset": "4:34 PM"},
+  "next_12h": [],
+  "alerts": [{"event": "Winter Weather Advisory"}]
+}

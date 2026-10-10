@@ -189,6 +189,17 @@ pub enum Feed<T> {
     Failed(FeedError),
 }
 
+impl<T> Feed<T> {
+    /// Turn each item into something else (for example a card to show).
+    pub fn map<U>(self, f: impl FnMut(T) -> U) -> Feed<U> {
+        match self {
+            Feed::Ready(items) => Feed::Ready(items.into_iter().map(f).collect()),
+            Feed::Stale(date) => Feed::Stale(date),
+            Feed::Failed(e) => Feed::Failed(e),
+        }
+    }
+}
+
 /// Read a list feed: `{"date": "YYYY-MM-DD", "items": [...]}`. `date` is
 /// optional; if it is there and is not today, the feed is [`Feed::Stale`].
 pub fn items<T: DeserializeOwned>(feeds: &dyn Feeds, now: DateTime<Local>, name: &str) -> Feed<T> {

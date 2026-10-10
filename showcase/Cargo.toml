@@ -15,6 +15,10 @@ path = "src/main.rs"
 # The command shares its name with the library; only the library gets docs.
 doc = false
 
+[features]
+# Full screen on a Raspberry Pi with no desktop: --kiosk.
+sdl = ["glowdots/sdl"]
+
 [dependencies]
 glowdots.workspace = true
 glowdots-scenes.workspace = true

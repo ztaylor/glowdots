@@ -1,0 +1,29 @@
+# Runs glowdots full screen at boot on a Raspberry Pi with no desktop, and
+# restarts it if it stops.
+#
+# 1. Build with SDL (needs libsdl2-dev):
+#      cargo build --release -p glowdots-showcase --features sdl
+# 2. Change User and the paths below to yours.
+# 3. Install:
+#      sudo cp tools/glowdots.service /etc/systemd/system/
+#      sudo systemctl daemon-reload && sudo systemctl enable --now glowdots
+[Unit]
+Description=glowdots pinball dot matrix display
+# If your feeds come over the network, wait for it. The display starts
+# anyway if it is not up yet.
+Wants=network-online.target
+After=network-online.target systemd-user-sessions.service
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/glowdots
+# --rotate 1 turns the picture for a portrait panel mounted sideways, like
+# the Raspberry Pi Touch Display 2. Use 0 for a landscape screen.
+ExecStart=/home/pi/glowdots/target/release/glowdots --kiosk --rotate 1 --data /home/pi/.local/share/glowdots
+Environment=SDL_VIDEODRIVER=kmsdrm
+# Come back after a crash, or if the screen was not ready yet at boot.
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
