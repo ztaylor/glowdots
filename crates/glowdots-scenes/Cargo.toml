@@ -1,0 +1,20 @@
+[package]
+name = "glowdots-scenes"
+description = "Example scenes for glowdots: a pinball clock, a demoscene tribute, weather, a split-flap news board, and feed-driven cards."
+keywords = ["pinball", "dmd", "dot-matrix", "retro", "scenes"]
+categories = ["graphics", "games"]
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+glowdots = { workspace = true, default-features = false }
+anyhow.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true

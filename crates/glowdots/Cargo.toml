@@ -1,0 +1,30 @@
+[package]
+name = "glowdots"
+description = "A 1990s pinball dot matrix display (DMD) engine: plasma dots, glow, bloom, scenes, and transitions. Runs in a window, in the browser, or on a Raspberry Pi panel."
+keywords = ["pinball", "dmd", "dot-matrix", "retro", "display"]
+categories = ["graphics", "rendering", "games"]
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[features]
+default = ["desktop"]
+# A window on macOS, Windows, and Linux desktops (winit + glutin).
+desktop = ["dep:winit", "dep:glutin", "dep:glutin-winit", "dep:raw-window-handle"]
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+image.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+glow = "0.18"
+winit = { version = "0.30", optional = true }
+glutin = { version = "0.32", optional = true }
+glutin-winit = { version = "0.5", optional = true }
+raw-window-handle = { version = "0.6", optional = true }

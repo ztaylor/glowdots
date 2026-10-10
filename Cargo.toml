@@ -1,0 +1,25 @@
+[workspace]
+resolver = "3"
+members = ["crates/glowdots", "crates/glowdots-scenes", "showcase"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+authors = ["Zachary Taylor"]
+repository = "https://github.com/ztaylor/glowdots"
+homepage = "https://github.com/ztaylor/glowdots"
+
+[workspace.dependencies]
+glowdots = { path = "crates/glowdots", version = "0.1.0" }
+glowdots-scenes = { path = "crates/glowdots-scenes", version = "0.1.0" }
+anyhow = "1.0"
+chrono = "0.4"
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[profile.release]
+opt-level = 3
+lto = "thin"

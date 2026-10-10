@@ -1,0 +1,22 @@
+[package]
+name = "glowdots-showcase"
+description = "The glowdots showcase: a deck of example scenes on a pinball dot matrix display."
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "glowdots"
+path = "src/main.rs"
+# The command shares its name with the library; only the library gets docs.
+doc = false
+
+[dependencies]
+glowdots.workspace = true
+glowdots-scenes.workspace = true
+anyhow.workspace = true
+image.workspace = true
