@@ -512,6 +512,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "color_quant",
+ "gif",
  "glow",
  "glutin",
  "glutin-winit",
@@ -654,8 +656,6 @@ checksum = "e6506c6c10786659413faa717ceebcb8f70731c0a60cbae39795fdf114519c1a"
 dependencies = [
  "bytemuck",
  "byteorder-lite",
- "color_quant",
- "gif",
  "moxcms",
  "num-traits",
  "png",

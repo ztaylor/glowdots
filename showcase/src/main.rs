@@ -12,6 +12,7 @@ glowdots: a 1990s pinball dot matrix display, with example scenes.
   --hold                  keep replaying the start scene
   --data DIR              read feeds from DIR first (then the samples)
   --glass classic|led|worn
+  --steady                no plasma shimmer (smaller GIFs)
   --shades N              panel shades, 2..16 (default 4)
   --rotate N              quarter turns of the panel (0..3)
   --fullscreen            fill the screen (F toggles it while running)
@@ -82,6 +83,7 @@ fn parse_args() -> Result<Args> {
                 }
             }
             "--shades" => a.shades = value()?.parse()?,
+            "--steady" => a.glass.flicker = 0.0,
             "--rotate" => a.rotate = value()?.parse()?,
             "--fullscreen" => a.fullscreen = true,
             "--kiosk" => a.kiosk = true,
