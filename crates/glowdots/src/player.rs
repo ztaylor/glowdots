@@ -5,7 +5,7 @@
 use crate::deck::Deck;
 use crate::frame::{Frame, Phosphor};
 use crate::glass::Glass;
-use crate::render::{Fit, Renderer, View};
+use crate::render::{Camera, Fit, Renderer, View};
 use crate::scene::{Input, Key, Look};
 use anyhow::{Result, anyhow};
 
@@ -19,6 +19,8 @@ pub struct Player {
     pub progress_line: bool,
     /// One look for every scene, in place of their own.
     pub look: Option<Look>,
+    /// Where the viewer looks (for videos and effects).
+    pub camera: Camera,
     frame: Frame,
     phosphor: Phosphor,
     /// Seconds played, summed in f64 so long runs do not drift.
@@ -30,7 +32,17 @@ impl Player {
     pub fn new(deck: Deck) -> Self {
         let frame = deck.new_frame();
         let phosphor = Phosphor::new(deck.size());
-        Self { deck, glass: Glass::CLASSIC, rotate: 0, progress_line: true, look: None, frame, phosphor, time: 0.0 }
+        Self {
+            deck,
+            glass: Glass::CLASSIC,
+            rotate: 0,
+            progress_line: true,
+            look: None,
+            camera: Camera::default(),
+            frame,
+            phosphor,
+            time: 0.0,
+        }
     }
 
     pub fn with_glass(mut self, glass: Glass) -> Self {
@@ -70,6 +82,7 @@ impl Player {
             look: self.look.unwrap_or_else(|| self.deck.look()),
             glass: self.glass,
             progress: self.progress_line.then(|| self.deck.progress()),
+            camera: self.camera,
         }
     }
 
@@ -97,7 +110,8 @@ impl Player {
     /// A tap or click at a point on a screen of `screen` pixels (top-left
     /// origin).
     pub fn tap(&mut self, screen: (u32, u32), x: f32, y: f32) {
-        let (px, py) = Fit::new(screen, self.deck.size(), self.rotate).to_panel(screen, self.rotate, x, y);
+        let fit = Fit::with_camera(screen, self.deck.size(), self.rotate, self.camera);
+        let (px, py) = fit.to_panel(screen, self.rotate, x, y);
         self.deck.input(Input::Tap { x: px, y: py });
     }
 

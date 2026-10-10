@@ -21,6 +21,12 @@ The pictures in the README come from the real scenes. After a change that shows,
 cargo run --release --bin media
 ```
 
+The launch video is made the same way, with a soundtrack synthesized to its cuts (it needs ffmpeg):
+
+```sh
+cargo run --release --bin promo -- glowdots-promo.mp4
+```
+
 ## A new example scene
 
 Example scenes live in `crates/glowdots-scenes`. A good one shows a pattern other people can take: say in its doc comment what it shows and what feed it reads, add a sample feed to `samples/`, add it to `showcase()`, and check that the test that runs every scene still passes. Keep text inside its area at the panel size; the existing scenes have tests that check long values fit.

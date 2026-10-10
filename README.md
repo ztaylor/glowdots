@@ -122,7 +122,7 @@ The `web` feature plays a deck in a canvas with WebGL 2. The [live demo](https:/
 |---|---|
 | [`crates/glowdots`](crates/glowdots) | The engine: frames, sprites, fonts, the deck and transitions, the renderer, and the window, Pi, and web players. |
 | [`crates/glowdots-scenes`](crates/glowdots-scenes) | The example scenes and their sample feeds. |
-| [`showcase`](showcase) | The `glowdots` program that plays them, and `media`, which makes the pictures in this README. |
+| [`showcase`](showcase) | The `glowdots` program that plays them; `media`, which makes the pictures in this README; and `promo`, which renders the launch video. |
 | [`web`](web) | The live demo page. |
 | [`docs`](docs) | Guides. The API reference is on [docs.rs](https://docs.rs/glowdots). |
 

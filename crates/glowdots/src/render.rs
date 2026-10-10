@@ -46,11 +46,29 @@ pub struct View {
     pub glass: Glass,
     /// The line under the panel (0..1), or none.
     pub progress: Option<f32>,
+    pub camera: Camera,
 }
 
 impl Default for View {
     fn default() -> Self {
-        Self { rotate: 0, time: 0.0, look: Look::WILLIAMS, glass: Glass::CLASSIC, progress: None }
+        Self { rotate: 0, time: 0.0, look: Look::WILLIAMS, glass: Glass::CLASSIC, progress: None, camera: Camera::default() }
+    }
+}
+
+/// Where the viewer looks: the whole panel, or closer in. For videos and
+/// effects; a display normally leaves it at its default.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Camera {
+    /// 1 fits the panel to the screen; 4 is four times closer.
+    pub zoom: f32,
+    /// The point on the panel, in dots, at the center of the screen. `None`
+    /// is the panel's center.
+    pub focus: Option<[f32; 2]>,
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self { zoom: 1.0, focus: None }
     }
 }
 
@@ -70,6 +88,20 @@ impl Fit {
         let pitch = (land[0] / size.w as f32).min(land[1] / size.h as f32).floor().max(1.0);
         let origin = [((land[0] - size.w as f32 * pitch) * 0.5).floor(), ((land[1] - size.h as f32 * pitch) * 0.5).floor()];
         Fit { pitch, origin }
+    }
+
+    /// Where the panel sits on the screen through a camera. With the default
+    /// camera it is [`Fit::new`].
+    pub fn with_camera(screen: (u32, u32), size: Size, rotate: u32, camera: Camera) -> Fit {
+        let base = Fit::new(screen, size, rotate);
+        if camera == Camera::default() {
+            return base;
+        }
+        let (sx, sy) = (screen.0 as f32, screen.1 as f32);
+        let land = if rotate % 2 == 1 { [sy, sx] } else { [sx, sy] };
+        let pitch = base.pitch * camera.zoom.max(0.01);
+        let focus = camera.focus.unwrap_or([size.w as f32 / 2.0, size.h as f32 / 2.0]);
+        Fit { pitch, origin: [land[0] / 2.0 - focus[0] * pitch, land[1] / 2.0 - focus[1] * pitch] }
     }
 
     /// Where a point on the screen (pixels, top-left origin) is on the
@@ -220,7 +252,7 @@ impl Renderer {
     unsafe fn draw_to(&self, out: Option<&Target>, view: &View) {
         let gl = &self.gl;
         let (sw, sh) = self.screen;
-        let fit = Fit::new(self.screen, self.size, view.rotate);
+        let fit = Fit::with_camera(self.screen, self.size, view.rotate, view.camera);
         let g = &view.glass;
         unsafe {
             gl.bind_vertex_array(Some(self.vao));
@@ -401,6 +433,11 @@ mod tests {
             let (x, y) = fit.to_panel(screen, rotate, screen.0 as f32 / 2.0, screen.1 as f32 / 2.0);
             assert_eq!((x, y), (40.0, 16.0), "rotate {rotate}");
         }
+        // A camera at 2x on the panel's top-left corner puts that corner in
+        // the middle of the screen.
+        let close = Fit::with_camera((800, 400), size, 0, Camera { zoom: 2.0, focus: Some([0.0, 0.0]) });
+        assert_eq!((close.pitch, close.origin), (20.0, [400.0, 200.0]));
+        assert_eq!(Fit::with_camera((800, 400), size, 0, Camera::default()), Fit::new((800, 400), size, 0));
         // Rotated a quarter, the top of a portrait screen is the panel's right.
         let fit = Fit::new((400, 800), size, 1);
         let (x, _) = fit.to_panel((400, 800), 1, 200.0, 10.0);
