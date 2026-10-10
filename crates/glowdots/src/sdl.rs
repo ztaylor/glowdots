@@ -5,7 +5,7 @@
 //! also works in a desktop session. Taps on a touch screen work like
 //! clicks; keys: Right and Left move between scenes, Esc or Q quits.
 
-#![cfg(feature = "sdl")]
+#![cfg(all(feature = "sdl", not(target_arch = "wasm32")))]
 
 use crate::frame::Size;
 use crate::player::Player;

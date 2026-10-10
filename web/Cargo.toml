@@ -13,7 +13,7 @@ repository.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-glowdots = { workspace = true, default-features = false, features = ["web"] }
+glowdots = { workspace = true, features = ["web"] }
 glowdots-scenes.workspace = true
 console_error_panic_hook = "0.1"
 serde_json.workspace = true

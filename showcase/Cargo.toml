@@ -20,7 +20,7 @@ doc = false
 sdl = ["glowdots/sdl"]
 
 [dependencies]
-glowdots.workspace = true
+glowdots = { workspace = true, features = ["desktop", "gif"] }
 glowdots-scenes.workspace = true
 anyhow.workspace = true
 image.workspace = true

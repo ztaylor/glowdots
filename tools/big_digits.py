@@ -5,7 +5,7 @@ Each digit is a stroked path in a 10 x 18 dot box, drawn at D px per dot.
 The program averages each D x D block into one dot, so the curves get
 soft, anti-aliased edges in the DMD's shades, like late pinball fonts.
 
-Output: assets/fonts/digits/{0..9,colon}.png
+Output: crates/glowdots-scenes/assets/fonts/digits/{0..9,colon}.png
 
 Usage: python3 tools/big_digits.py   (needs rsvg-convert)
 """
@@ -17,7 +17,7 @@ from pathlib import Path
 D = 8
 W, H = 10, 18
 STROKE = 2.1  # in dots
-OUT = Path(__file__).resolve().parent.parent / "assets" / "fonts" / "digits"
+OUT = Path(__file__).resolve().parent.parent / "crates" / "glowdots-scenes" / "assets" / "fonts" / "digits"
 
 SIX = ("M 7.5,1.5 H 5 A 3.5,4 0 0 0 1.5,5.5 V 13 A 3.5,3.5 0 0 0 5,16.5 "
        "A 3.5,3.5 0 0 0 8.5,13 V 12 A 3.5,3.5 0 0 0 5,8.5 H 1.5")

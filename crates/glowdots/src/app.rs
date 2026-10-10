@@ -1,12 +1,12 @@
-//! A desktop window that plays a deck (feature `desktop`), and offscreen
-//! rendering for screenshots and GIFs.
+//! A desktop window that plays a deck (feature `desktop`, not on the web),
+//! and offscreen rendering for screenshots and GIFs.
 //!
 //! Keys: Right or Space for the next scene, Left for the one before, Up,
 //! Down, Enter, and letters go to the scene, F toggles fullscreen, Esc or
 //! Q quits. A click or tap on the right half goes forward, on the left
 //! half back (unless the scene uses it).
 
-#![cfg(feature = "desktop")]
+#![cfg(all(feature = "desktop", not(target_arch = "wasm32")))]
 
 use crate::frame::Size;
 use crate::player::Player;

@@ -9,10 +9,10 @@ rust-version = "1.85"
 license = "MIT"
 authors = ["Zachary Taylor"]
 repository = "https://github.com/ztaylor/glowdots"
-homepage = "https://github.com/ztaylor/glowdots"
+homepage = "https://ztaylor.github.io/glowdots/"
 
 [workspace.dependencies]
-glowdots = { path = "crates/glowdots", version = "0.1.0" }
+glowdots = { path = "crates/glowdots", version = "0.1.0", default-features = false }
 glowdots-scenes = { path = "crates/glowdots-scenes", version = "0.1.0" }
 anyhow = "1.0"
 chrono = "0.4"

@@ -11,9 +11,10 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
+documentation = "https://docs.rs/glowdots-scenes"
 
 [dependencies]
-glowdots = { workspace = true, default-features = false }
+glowdots.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 serde.workspace = true
