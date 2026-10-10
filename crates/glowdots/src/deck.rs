@@ -97,6 +97,11 @@ impl Deck {
         self
     }
 
+    /// Change where the scenes get the time, while the deck runs.
+    pub fn set_clock(&mut self, clock: Clock) {
+        self.clock = clock;
+    }
+
     /// Start at the scene called `name` (before the deck runs).
     pub fn select(&mut self, name: &str) -> Result<()> {
         let Some(i) = self.scenes.iter().position(|s| s.name() == name) else {
@@ -134,6 +139,15 @@ impl Deck {
     /// The deck's time now.
     pub fn now(&self) -> DateTime<Local> {
         self.clock.now()
+    }
+
+    /// Go to the scene called `name` now, with its own transition.
+    pub fn jump(&mut self, name: &str) -> Result<()> {
+        let Some(i) = self.scenes.iter().position(|s| s.name() == name) else {
+            bail!("there is no scene {name}; the scenes are {}", self.names().join(", "));
+        };
+        self.go(i, None);
+        Ok(())
     }
 
     pub fn next(&mut self) {

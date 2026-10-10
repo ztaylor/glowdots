@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>glowdots</title>
+<meta name="description" content="A 1990s pinball dot matrix display engine. Live demo: scenes, glass, colors, and your own JSON data, running in your browser.">
+<meta name="color-scheme" content="light dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="backbox">
+  <div class="plate">
+    <h1 class="wordmark">glowdots</h1>
+    <a class="source" href="https://github.com/ztaylor/glowdots">Source on GitHub</a>
+  </div>
+  <div class="panel">
+    <div class="grille" aria-hidden="true"></div>
+    <div class="bezel">
+      <canvas id="dmd" aria-label="The dot matrix display. Tap the right half for the next scene, the left half to go back."></canvas>
+      <p class="fault" id="fault" hidden></p>
+    </div>
+    <div class="grille" aria-hidden="true"></div>
+  </div>
+  <p class="hint">Tap the right half of the display for the next scene, the left half to go back. Once you tap it, the arrow keys work too.</p>
+</header>
+
+<main class="card">
+  <section class="intro">
+    <p class="lede">A 1990s pinball dot matrix display, for anything you want to show. Write a scene in Rust, feed it JSON, and run it in a window, in a web page, or full screen on a Raspberry Pi.</p>
+    <p>Everything here is the real engine, compiled to WebAssembly: the round plasma dots, their glow and afterglow, the pinball transitions, and the example scenes. Change the controls and the display follows.</p>
+    <h2>Run it on your computer</h2>
+    <pre><code>git clone https://github.com/ztaylor/glowdots
+cd glowdots
+cargo run --release</code></pre>
+    <p>Then make it yours: <a href="https://github.com/ztaylor/glowdots/blob/main/crates/glowdots/examples/hello.rs">a whole scene fits in 30 lines</a>.</p>
+  </section>
+
+  <section class="controls" aria-label="Controls">
+    <div class="group">
+      <h2>Scenes</h2>
+      <div class="chips" id="scenes"></div>
+      <label class="check"><input type="checkbox" id="hold"> Stay on this scene</label>
+    </div>
+
+    <div class="group">
+      <h2>Glass</h2>
+      <div class="segmented" role="radiogroup" aria-label="Glass" id="glass">
+        <button type="button" role="radio" aria-checked="true" data-glass="classic">Classic plasma</button>
+        <button type="button" role="radio" aria-checked="false" data-glass="led">LED panel</button>
+        <button type="button" role="radio" aria-checked="false" data-glass="worn">Worn plasma</button>
+      </div>
+      <details class="tune">
+        <summary>Tune the glass</summary>
+        <div class="sliders" id="sliders"></div>
+      </details>
+    </div>
+
+    <div class="group">
+      <h2>Color</h2>
+      <div class="swatches" role="radiogroup" aria-label="Color" id="looks"></div>
+    </div>
+
+    <div class="group">
+      <h2>Time of day</h2>
+      <div class="time">
+        <input type="range" id="time" min="0" max="1435" step="5" aria-label="Time of day">
+        <output id="time-out" for="time"></output>
+      </div>
+      <p class="note"><button type="button" class="link" id="real-time">Use the real time</button>. The clock, the weather sky, and the lake follow it. <button type="button" class="link" data-show="lake">See the lake</button></p>
+    </div>
+  </section>
+
+  <section class="data" aria-labelledby="data-title">
+    <h2 id="data-title">Your data</h2>
+    <p>Scenes read JSON feeds. Edit one and show it: a cron job, a script, or an AI agent can write the same file on a real display.</p>
+    <div class="editor">
+      <div class="feed-bar">
+        <label for="feed">Feed</label>
+        <select id="feed">
+          <option value="events.json">events.json</option>
+          <option value="sports.json">sports.json</option>
+          <option value="news.json">news.json</option>
+          <option value="status.json">status.json</option>
+          <option value="weather.json">weather.json</option>
+          <option value="lake.json">lake.json</option>
+        </select>
+        <span class="status" id="feed-status" role="status"></span>
+      </div>
+      <textarea id="feed-text" spellcheck="false" aria-label="Feed JSON"></textarea>
+      <div class="actions">
+        <button type="button" class="start" id="feed-show">Show it on the display</button>
+        <button type="button" class="plain" id="feed-reset">Put the sample back</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>MIT licensed. Made by <a href="https://github.com/ztaylor">Zachary Taylor</a>, after the Williams machines of the 1990s.</p>
+</footer>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

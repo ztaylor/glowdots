@@ -1,3 +1,4 @@
 /target
 *.png.tmp
 .DS_Store
+/web/www/pkg

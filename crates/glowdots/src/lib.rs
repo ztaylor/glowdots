@@ -16,7 +16,8 @@
 //!   in [`render`] that draw round plasma dots with a halo and bloom.
 //! - [`app`] (feature `desktop`): play in a window, or render offscreen
 //!   for [`export`]ed screenshots and GIFs. [`sdl`] (feature `sdl`): play
-//!   full screen on a Raspberry Pi panel with no desktop.
+//!   full screen on a Raspberry Pi panel with no desktop. [`web`] (feature
+//!   `web`): play in a web page with WebGL 2.
 //!
 //! The defaults are the classic look: Williams orange, 4 shades, round
 //! plasma dots. The panel can be any size, have up to 16 shades, use a
@@ -56,6 +57,7 @@ pub mod sdl;
 pub mod time;
 pub mod transition;
 pub mod ui;
+pub mod web;
 
 pub use chrono;
 pub use deck::Deck;

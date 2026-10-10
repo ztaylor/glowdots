@@ -1,0 +1,21 @@
+[package]
+name = "glowdots-web"
+description = "The glowdots web demo: the showcase deck in a browser, with live controls."
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+glowdots = { workspace = true, default-features = false, features = ["web"] }
+glowdots-scenes.workspace = true
+console_error_panic_hook = "0.1"
+serde_json.workspace = true
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["HtmlCanvasElement"] }
