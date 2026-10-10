@@ -14,5 +14,11 @@ pub const SIZE: Size = Size::new(80, 32);
 
 /// The showcase deck: every example scene, in order.
 pub fn showcase() -> anyhow::Result<Vec<Box<dyn Scene>>> {
+    // More scenes join as they are ported.
     Ok(vec![Box::new(clock::Clock::new()?), Box::new(demo::Demo::new())])
+}
+
+/// Sample feeds for every example scene, built in.
+pub fn samples() -> glowdots::Bundled {
+    glowdots::Bundled::new()
 }

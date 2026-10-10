@@ -1,27 +1,34 @@
 precision highp float;
 
-uniform sampler2D u_frame;  // DMD dots, R8, 0 = off, 1 = full brightness
-uniform vec2 u_screen;      // physical framebuffer size in pixels
-uniform int u_rotate;       // quarter turns (0..3) from panel to landscape
-uniform float u_time;       // seconds
-uniform vec3 u_color;       // color of a fully lit dot (the scene's look)
-uniform float u_progress;   // 0..1: time until the next scene; < 0 hides it
+uniform sampler2D u_frame;   // per dot: rgb = its own colour (0 = the look's), a = brightness
+uniform vec2 u_screen;       // framebuffer size in pixels
+uniform int u_rotate;        // quarter turns (0..3) from panel to landscape
+uniform float u_time;        // seconds
+uniform float u_pitch;       // screen pixels per dot (a whole number)
+uniform vec2 u_origin;       // the panel's top-left, in landscape pixels
+uniform float u_progress;    // 0..1: time until the next scene; < 0 hides the line
+
+// The look: the colour of a lit dot, and a palette by brightness.
+uniform vec3 u_color;
+uniform vec3 u_palette[16];
+uniform float u_palette_weight;  // 0 = the colour, 1 = the palette
+
+// The glass (see glass.rs).
+uniform float u_dot_size;
+uniform float u_roundness;
+uniform float u_halo;
+uniform float u_halo_width;
+uniform float u_unlit;
+uniform float u_variation;
+uniform float u_flicker;
+uniform float u_gamma;
+uniform float u_hot_core;
 
 out vec4 o_color;
 
-// ---- Look ---------------------------------------------------------------
-// The dot color comes from u_color. These are relative to it.
-const float UNLIT_GLOW = 0.065;                 // dark dots stay faintly visible
-const vec3 WHITE_HOT   = vec3(1.0, 0.85, 0.6);  // bright dot centers lean to white
-const float PROGRESS_TRACK = 0.05;              // progress line: unfilled part
-const float PROGRESS_FILL  = 0.30;              // progress line: filled part
-const float DOT_RADIUS = 0.43;                  // in cell units (0.5 = touching)
-const float HALO       = 0.12;                  // tight glow around each dot
-const float HALO_WIDTH = 0.45;                  // halo falloff, in cell units
-const float DOT_SPREAD = 0.18;                  // dot-to-dot brightness spread (old panel)
-const float FLICKER    = 0.05;                  // fast plasma shimmer
-const float GAMMA      = 1.6;                   // spreads the 4 shades apart
-// -------------------------------------------------------------------------
+const vec3 WHITE_HOT = vec3(1.0, 0.85, 0.6);  // bright dot centres lean to this
+const float PROGRESS_TRACK = 0.05;            // progress line: unfilled part
+const float PROGRESS_FILL = 0.30;             // progress line: filled part
 
 float hash(vec2 p) {
     p = fract(p * vec2(123.34, 456.21));
@@ -29,10 +36,37 @@ float hash(vec2 p) {
     return fract(p.x * p.y);
 }
 
-float level(ivec2 cell) {
+vec4 dot_at(ivec2 cell) {
     ivec2 size = textureSize(u_frame, 0);
-    if (any(lessThan(cell, ivec2(0))) || any(greaterThanEqual(cell, size))) return 0.0;
-    return pow(texelFetch(u_frame, cell, 0).r, GAMMA);
+    if (any(lessThan(cell, ivec2(0))) || any(greaterThanEqual(cell, size))) return vec4(0.0);
+    return texelFetch(u_frame, cell, 0);
+}
+
+vec3 palette(float a) {
+    float x = clamp(a, 0.0, 1.0) * 15.0;
+    int i = int(floor(x));
+    int j = min(i + 1, 15);
+    return mix(u_palette[i], u_palette[j], x - float(i));
+}
+
+float maxc(vec3 c) {
+    return max(c.r, max(c.g, c.b));
+}
+
+// A dot's lit colour, for brightness v (after gamma and gain), and how
+// strong it is (for the white-hot core). A dot with its own colour uses
+// it; the rest take the look's colour, or its palette.
+vec3 lit(vec4 d, float v, float gain, out float strength) {
+    if (d.r + d.g + d.b > 0.0) {
+        strength = v * maxc(d.rgb);
+        return d.rgb * v;
+    }
+    strength = v;
+    vec3 tint = u_color * v;
+    if (u_palette_weight <= 0.0) return tint;
+    vec3 pal = palette(d.a) * gain;
+    strength = mix(v, maxc(pal), u_palette_weight);
+    return mix(tint, pal, u_palette_weight);
 }
 
 void main() {
@@ -41,20 +75,16 @@ void main() {
     // Panel pixel -> landscape pixel (origin top-left, y down).
     vec2 p = gl_FragCoord.xy;
     vec2 s = u_screen;
-    vec2 q, land;
-    if      (u_rotate == 0) { q = vec2(p.x, s.y - p.y);       land = s; }
-    else if (u_rotate == 1) { q = vec2(p.y, p.x);             land = s.yx; }
-    else if (u_rotate == 2) { q = vec2(s.x - p.x, p.y);       land = s; }
-    else                    { q = vec2(s.y - p.y, s.x - p.x); land = s.yx; }
+    vec2 q;
+    if      (u_rotate == 0) q = vec2(p.x, s.y - p.y);
+    else if (u_rotate == 1) q = vec2(p.y, p.x);
+    else if (u_rotate == 2) q = vec2(s.x - p.x, p.y);
+    else                    q = vec2(s.y - p.y, s.x - p.x);
 
-    // Whole pixels per dot, so every dot is the same shape.
-    float pitch = floor(min(land.x / dmd.x, land.y / dmd.y));
-    vec2 origin = floor((land - dmd * pitch) * 0.5);
+    float pitch = u_pitch;
+    vec2 origin = u_origin;
     vec2 d = (q - origin) / pitch;  // position in dot units
-
-    vec3 PLASMA = u_color;
-    vec3 HOT_CORE = mix(u_color, WHITE_HOT, 0.6);
-    vec3 UNLIT = u_color * UNLIT_GLOW;
+    vec3 UNLIT = u_color * u_unlit;
 
     if (any(lessThan(d, vec2(-1.0))) || any(greaterThan(d, dmd + 1.0))) {
         // Below the panel: a thin, quiet line that fills up until the
@@ -71,30 +101,43 @@ void main() {
 
     ivec2 cell = ivec2(floor(d));
     vec2 f = fract(d) - 0.5;
-    float r = length(f);
+    float r;
+    if (u_roundness >= 1.0) {
+        r = length(f);
+    } else {
+        // A rounded square: a superellipse between square and circle.
+        float e = mix(10.0, 2.0, clamp(u_roundness, 0.0, 1.0));
+        vec2 af = abs(f);
+        r = pow(pow(af.x, e) + pow(af.y, e), 1.0 / e);
+    }
     float aa = 1.0 / pitch;  // one screen pixel, in cell units
     bool on_grid = all(greaterThanEqual(cell, ivec2(0))) && all(lessThan(cell, ivec2(dmd)));
 
     // Every dot is a little different, and the plasma shimmers.
     vec2 id = vec2(cell);
-    float gain = 1.0 - DOT_SPREAD * hash(id);
-    gain *= 1.0 - FLICKER * hash(id + floor(u_time * 60.0) * 0.731);
+    float gain = 1.0 - u_variation * hash(id);
+    gain *= 1.0 - u_flicker * hash(id + floor(u_time * 60.0) * 0.731);
 
-    float v = level(cell) * gain;
-    float inside = 1.0 - smoothstep(DOT_RADIUS - aa, DOT_RADIUS + aa, r);
-    float core = pow(clamp(1.0 - r / DOT_RADIUS, 0.0, 1.0), 2.0) * v * v;
+    vec4 here = dot_at(cell);
+    float v = pow(here.a, u_gamma) * gain;
+    float strength;
+    vec3 body = lit(here, v, gain, strength);
+    float inside = 1.0 - smoothstep(u_dot_size - aa, u_dot_size + aa, r);
+    float core = pow(clamp(1.0 - r / u_dot_size, 0.0, 1.0), 2.0) * v * v;
     vec3 col = vec3(0.0);
-    if (on_grid) col = inside * (UNLIT + mix(PLASMA, HOT_CORE, core * 0.7) * v);
+    if (on_grid) col = inside * (UNLIT + mix(body, WHITE_HOT * strength, core * 0.7 * u_hot_core));
 
     // Tight halo from this dot and its 8 neighbours. Bloom adds the wide glow.
-    float halo = 0.0;
+    vec3 halo = vec3(0.0);
     for (int y = -1; y <= 1; y++) {
         for (int x = -1; x <= 1; x++) {
+            vec4 n = dot_at(cell + ivec2(x, y));
             float dist = length(f - vec2(x, y));
-            halo += level(cell + ivec2(x, y)) * exp(-(dist * dist) / (HALO_WIDTH * HALO_WIDTH));
+            float unused;
+            halo += lit(n, pow(n.a, u_gamma), 1.0, unused) * exp(-(dist * dist) / (u_halo_width * u_halo_width));
         }
     }
-    col += PLASMA * halo * HALO * (1.0 - inside * 0.5);
+    col += halo * u_halo * (1.0 - inside * 0.5);
 
     o_color = vec4(col, 1.0);
 }

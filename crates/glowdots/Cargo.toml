@@ -13,9 +13,26 @@ repository.workspace = true
 homepage.workspace = true
 
 [features]
-default = ["desktop"]
-# A window on macOS, Windows, and Linux desktops (winit + glutin).
+default = ["desktop", "gif"]
+# A window on macOS, Windows, and Linux desktops (winit + glutin), and
+# offscreen rendering for screenshots.
 desktop = ["dep:winit", "dep:glutin", "dep:glutin-winit", "dep:raw-window-handle"]
+# Full screen through SDL2: a Raspberry Pi panel with no desktop (KMSDRM).
+# Needs the SDL2 library (libsdl2-dev).
+sdl = ["dep:sdl2"]
+# Animated GIF export.
+gif = ["image/gif"]
+
+[package.metadata.docs.rs]
+features = ["desktop", "gif"]
+
+[[example]]
+name = "hello"
+required-features = ["desktop"]
+
+[[example]]
+name = "looks"
+required-features = ["desktop"]
 
 [dependencies]
 anyhow.workspace = true
@@ -28,3 +45,4 @@ winit = { version = "0.30", optional = true }
 glutin = { version = "0.32", optional = true }
 glutin-winit = { version = "0.5", optional = true }
 raw-window-handle = { version = "0.6", optional = true }
+sdl2 = { version = "0.38", optional = true }

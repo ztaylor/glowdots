@@ -1,37 +1,96 @@
 //! The glowdots showcase: a deck of example scenes in a window.
-//!
-//! Usage: glowdots [--scene NAME] [--hold] [--rotate 0..3] [--fullscreen]
-//!                 [--now "YYYY-MM-DD HH:MM"] [--screenshot OUT.png [--time SECONDS]]
-//!                 [--list]
 
 use anyhow::{Result, anyhow, bail};
-use glowdots::Deck;
-use glowdots::app::{self, Options, Screenshot};
+use glowdots::app::{self, Options};
+use glowdots::{Clock, Deck, Folder, Glass, Layered, Player, export, time};
 use std::path::PathBuf;
+
+const USAGE: &str = "
+glowdots: a 1990s pinball dot matrix display, with example scenes.
+
+  --scene NAME            start at this scene (see --list)
+  --hold                  keep replaying the start scene
+  --data DIR              read feeds from DIR first (then the samples)
+  --glass classic|led|worn
+  --shades N              panel shades, 2..16 (default 4)
+  --rotate N              quarter turns of the panel (0..3)
+  --fullscreen            fill the screen (F toggles it while running)
+  --now \"YYYY-MM-DD HH:MM\" pretend it is this time
+  --screenshot OUT.png    save the frame at --time seconds, then stop
+  --gif OUT.gif           record --seconds of play from --time, then stop
+  --time S  --seconds S  --fps N  --size WxH
+  --list                  print the scene names
+
+Keys: Right/Space next, Left back, F fullscreen, Esc or Q quit.
+Click or tap the right half for the next scene, the left half to go back.
+";
 
 struct Args {
     scene: Option<String>,
     hold: bool,
     list: bool,
-    options: Options,
-    time: f32,
+    data: Option<PathBuf>,
+    glass: Glass,
+    shades: u8,
+    rotate: u32,
+    fullscreen: bool,
+    now: Option<String>,
     screenshot: Option<PathBuf>,
+    gif: Option<PathBuf>,
+    time: f32,
+    seconds: f32,
+    fps: u32,
+    size: (u32, u32),
 }
 
 fn parse_args() -> Result<Args> {
-    let mut args = Args { scene: None, hold: false, list: false, options: Options::default(), time: 0.0, screenshot: None };
+    let mut a = Args {
+        scene: None,
+        hold: false,
+        list: false,
+        data: None,
+        glass: Glass::CLASSIC,
+        shades: 4,
+        rotate: 0,
+        fullscreen: false,
+        now: None,
+        screenshot: None,
+        gif: None,
+        time: 0.0,
+        seconds: 6.0,
+        fps: 25,
+        size: (1200, 480),
+    };
     let mut it = std::env::args().skip(1);
-    while let Some(a) = it.next() {
-        let mut value = || it.next().ok_or(anyhow!("{a} needs a value"));
-        match a.as_str() {
-            "--scene" => args.scene = Some(value()?),
-            "--hold" => args.hold = true,
-            "--list" => args.list = true,
-            "--rotate" => args.options.rotate = value()?.parse()?,
-            "--fullscreen" => args.options.fullscreen = true,
-            "--now" => glowdots::time::simulate_now(&value()?).map_err(|e| anyhow!(e))?,
-            "--screenshot" => args.screenshot = Some(value()?.into()),
-            "--time" => args.time = value()?.parse()?,
+    while let Some(arg) = it.next() {
+        let mut value = || it.next().ok_or(anyhow!("{arg} needs a value"));
+        match arg.as_str() {
+            "--scene" => a.scene = Some(value()?),
+            "--hold" => a.hold = true,
+            "--list" => a.list = true,
+            "--data" => a.data = Some(value()?.into()),
+            "--glass" => {
+                a.glass = match value()?.as_str() {
+                    "classic" => Glass::CLASSIC,
+                    "led" => Glass::LED,
+                    "worn" => Glass::WORN,
+                    g => bail!("no glass {g}: use classic, led, or worn"),
+                }
+            }
+            "--shades" => a.shades = value()?.parse()?,
+            "--rotate" => a.rotate = value()?.parse()?,
+            "--fullscreen" => a.fullscreen = true,
+            "--now" => a.now = Some(value()?),
+            "--screenshot" => a.screenshot = Some(value()?.into()),
+            "--gif" => a.gif = Some(value()?.into()),
+            "--time" => a.time = value()?.parse()?,
+            "--seconds" => a.seconds = value()?.parse()?,
+            "--fps" => a.fps = value()?.parse()?,
+            "--size" => {
+                let v = value()?;
+                let (w, h) = v.split_once('x').ok_or(anyhow!("--size is WxH, like 1200x480"))?;
+                a.size = (w.parse()?, h.parse()?);
+            }
             "-h" | "--help" => {
                 println!("{}", USAGE.trim());
                 std::process::exit(0);
@@ -39,42 +98,60 @@ fn parse_args() -> Result<Args> {
             s => bail!("unknown option {s}\n{}", USAGE.trim()),
         }
     }
-    if let Some(path) = args.screenshot.take() {
-        args.options.screenshot = Some(Screenshot { path, seconds: args.time });
-    }
-    Ok(args)
+    Ok(a)
 }
-
-const USAGE: &str = "
-glowdots: a 1990s pinball dot matrix display, with example scenes.
-
-  --scene NAME         start at this scene (see --list)
-  --hold               keep replaying the start scene
-  --rotate N           quarter turns of the panel (0..3)
-  --fullscreen         fill the screen (F toggles it while running)
-  --now \"YYYY-MM-DD HH:MM\"   pretend it is this time
-  --screenshot OUT.png [--time S]   save the frame at S seconds, then stop
-  --list               print the scene names
-
-Keys: Right/Space next, Left back, F fullscreen, Esc or Q quit.
-Click or tap the right half for the next scene, the left half to go back.
-";
 
 fn main() -> Result<()> {
     let args = parse_args()?;
-    let scenes = glowdots_scenes::showcase()?;
-    let names: Vec<&str> = scenes.iter().map(|s| s.name()).collect();
+    let mut feeds = Layered::new();
+    if let Some(dir) = &args.data {
+        feeds = feeds.then(Folder::new(dir));
+    }
+    let feeds = feeds.then(glowdots_scenes::samples());
+
+    let exporting = args.screenshot.is_some() || args.gif.is_some();
+    let start = match &args.now {
+        Some(s) => Some(time::parse_local(s).map_err(|e| anyhow!(e))?),
+        None => None,
+    };
+    // Exports run on a stepped clock, so they come out the same every time.
+    let clock = match (start, exporting) {
+        (Some(s), true) => Clock::stepped(s),
+        (None, true) => Clock::stepped(glowdots::chrono::Local::now()),
+        (Some(s), false) => Clock::starting_at(s),
+        (None, false) => Clock::system(),
+    };
+
+    let mut deck =
+        Deck::new(glowdots_scenes::SIZE, glowdots_scenes::showcase()?)?.with_shades(args.shades).with_feeds(feeds).with_clock(clock);
     if args.list {
-        println!("{}", names.join("\n"));
+        println!("{}", deck.names().join("\n"));
         return Ok(());
     }
-    let start = match &args.scene {
-        Some(name) => names.iter().position(|n| n == name).ok_or(anyhow!("no scene {name}; scenes: {names:?}"))?,
-        None => 0,
-    };
-    let mut deck = Deck::new(glowdots_scenes::SIZE, scenes, start)?;
+    if let Some(name) = &args.scene {
+        deck.select(name)?;
+    }
     deck.hold = args.hold;
-    deck.on_scene = Some(Box::new(|name| eprintln!("scene: {name}")));
-    eprintln!("scene: {}", deck.current().name());
-    app::run(deck, args.options)
+    if !exporting {
+        deck.on_scene = Some(Box::new(|name| eprintln!("scene: {name}")));
+    }
+    let mut player = Player::new(deck).with_glass(args.glass).with_rotate(args.rotate);
+
+    if exporting {
+        player.progress_line = false;
+        let panel = player.deck.size();
+        return app::offscreen(panel, args.size, |r| {
+            if let Some(path) = &args.screenshot {
+                export::png(&mut player, r, args.time, path)?;
+                eprintln!("saved {}", path.display());
+            }
+            if let Some(path) = &args.gif {
+                player.skip(args.time - player.time());
+                export::gif(&mut player, r, args.seconds, args.fps, path)?;
+                eprintln!("saved {}", path.display());
+            }
+            Ok(())
+        });
+    }
+    app::run(player, Options { fullscreen: args.fullscreen, ..Default::default() })
 }

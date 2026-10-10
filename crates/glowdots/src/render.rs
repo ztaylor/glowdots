@@ -1,6 +1,6 @@
 //! GPU renderer.
 //!
-//! 1. `dots`: draw each DMD value as a round plasma dot, into `scene`.
+//! 1. `dots`: draw each dot as a round plasma dot, into `scene`.
 //! 2. `down`: shrink `scene` to 1/4 size for bloom.
 //! 3. `blur`: blur it (horizontal, vertical, twice).
 //! 4. `composite`: scene + bloom, to the screen.
@@ -10,12 +10,12 @@
 //! `#version` line; see [`Dialect`].
 
 use crate::frame::Size;
+use crate::glass::Glass;
 use crate::scene::Look;
 use anyhow::{Result, anyhow};
 use glow::HasContext;
 
 const BLOOM_DIVISOR: u32 = 4;
-const BLOOM_STRENGTH: f32 = 0.8;
 
 /// Which GLSL the context speaks.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -32,6 +32,57 @@ impl Dialect {
             Dialect::Es300 => "#version 300 es\n",
             Dialect::Core330 => "#version 330 core\n",
         }
+    }
+}
+
+/// Everything about one drawn frame besides the dots.
+#[derive(Clone, Copy, Debug)]
+pub struct View {
+    /// Quarter turns of the panel on the screen (0..3).
+    pub rotate: u32,
+    /// Seconds, for the shimmer.
+    pub time: f32,
+    pub look: Look,
+    pub glass: Glass,
+    /// The line under the panel (0..1), or none.
+    pub progress: Option<f32>,
+}
+
+impl Default for View {
+    fn default() -> Self {
+        Self { rotate: 0, time: 0.0, look: Look::WILLIAMS, glass: Glass::CLASSIC, progress: None }
+    }
+}
+
+/// Where the panel sits on the screen: whole pixels per dot, centred.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Fit {
+    /// Screen pixels per dot.
+    pub pitch: f32,
+    /// The panel's top-left corner, in pixels of the screen turned to landscape.
+    pub origin: [f32; 2],
+}
+
+impl Fit {
+    pub fn new(screen: (u32, u32), size: Size, rotate: u32) -> Fit {
+        let (sx, sy) = (screen.0 as f32, screen.1 as f32);
+        let land = if rotate % 2 == 1 { [sy, sx] } else { [sx, sy] };
+        let pitch = (land[0] / size.w as f32).min(land[1] / size.h as f32).floor().max(1.0);
+        let origin = [((land[0] - size.w as f32 * pitch) * 0.5).floor(), ((land[1] - size.h as f32 * pitch) * 0.5).floor()];
+        Fit { pitch, origin }
+    }
+
+    /// Where a point on the screen (pixels, top-left origin) is on the
+    /// panel, in dots.
+    pub fn to_panel(&self, screen: (u32, u32), rotate: u32, x: f32, y: f32) -> (f32, f32) {
+        let (sx, sy) = (screen.0 as f32, screen.1 as f32);
+        let q = match rotate % 4 {
+            0 => (x, y),
+            1 => (sy - y, x),
+            2 => (sx - x, sy - y),
+            _ => (y, sx - x),
+        };
+        ((q.0 - self.origin[0]) / self.pitch, (q.1 - self.origin[1]) / self.pitch)
     }
 }
 
@@ -62,7 +113,7 @@ pub struct Renderer {
     composite: glow::Program,
     scene: Target,
     bloom: [Target; 2],
-    /// An offscreen copy of the screen, for screenshots.
+    /// An offscreen copy of the screen, for captures.
     shot: Option<Target>,
     screen: (u32, u32),
 }
@@ -77,7 +128,7 @@ impl Renderer {
             let blur = link(&gl, dialect, vert, include_str!("shaders/blur.frag"))?;
             let composite = link(&gl, dialect, vert, include_str!("shaders/composite.frag"))?;
 
-            let frame_tex = texture(&gl, glow::R8, size.w, size.h, glow::NEAREST)?;
+            let frame_tex = texture(&gl, glow::RGBA8, size.w, size.h, glow::NEAREST)?;
             gl.pixel_store_i32(glow::UNPACK_ALIGNMENT, 1);
 
             let (scene, bloom) = targets(&gl, screen)?;
@@ -92,6 +143,20 @@ impl Renderer {
 
     pub fn screen(&self) -> (u32, u32) {
         self.screen
+    }
+
+    /// Draw a panel of another size from now on.
+    pub fn set_size(&mut self, size: Size) -> Result<()> {
+        if size == self.size {
+            return Ok(());
+        }
+        unsafe {
+            let tex = texture(&self.gl, glow::RGBA8, size.w, size.h, glow::NEAREST)?;
+            self.gl.delete_texture(self.frame_tex);
+            self.frame_tex = tex;
+        }
+        self.size = size;
+        Ok(())
     }
 
     /// The screen changed size: remake the render targets.
@@ -115,9 +180,11 @@ impl Renderer {
         Ok(())
     }
 
-    /// Upload dot brightness (0..=255), row-major, top row first.
-    pub fn upload(&self, bytes: &[u8]) {
-        debug_assert_eq!(bytes.len(), self.size.dots());
+    /// Upload the dots: per dot, its own colour (0, 0, 0 for the look's)
+    /// and brightness, as RGBA bytes, row-major, top row first. See
+    /// [`Phosphor::rgba`](crate::Phosphor::rgba).
+    pub fn upload(&self, rgba: &[u8]) {
+        debug_assert_eq!(rgba.len(), self.size.dots() * 4);
         unsafe {
             self.gl.bind_texture(glow::TEXTURE_2D, Some(self.frame_tex));
             self.gl.tex_sub_image_2d(
@@ -127,44 +194,64 @@ impl Renderer {
                 0,
                 self.size.w as i32,
                 self.size.h as i32,
-                glow::RED,
+                glow::RGBA,
                 glow::UNSIGNED_BYTE,
-                glow::PixelUnpackData::Slice(Some(bytes)),
+                glow::PixelUnpackData::Slice(Some(rgba)),
             );
         }
     }
 
-    /// Draw one frame to the screen. `rotate` is quarter turns of the
-    /// panel. `progress` (0..1) is the line under the panel; below 0 hides it.
-    pub fn draw(&self, rotate: u32, time: f32, look: Look, progress: f32) {
-        unsafe { self.draw_to(None, rotate, time, look, progress) }
+    /// Draw one frame to the screen.
+    pub fn draw(&self, view: &View) {
+        unsafe { self.draw_to(None, view) }
     }
 
     /// Draw one frame offscreen, for [`Renderer::read_pixels`].
-    pub fn draw_offscreen(&mut self, rotate: u32, time: f32, look: Look, progress: f32) -> Result<()> {
+    pub fn draw_offscreen(&mut self, view: &View) -> Result<()> {
         unsafe {
             if self.shot.is_none() {
                 self.shot = Some(target(&self.gl, self.screen.0, self.screen.1)?);
             }
-            self.draw_to(self.shot.as_ref(), rotate, time, look, progress);
+            self.draw_to(self.shot.as_ref(), view);
         }
         Ok(())
     }
 
-    unsafe fn draw_to(&self, out: Option<&Target>, rotate: u32, time: f32, look: Look, progress: f32) {
+    unsafe fn draw_to(&self, out: Option<&Target>, view: &View) {
         let gl = &self.gl;
         let (sw, sh) = self.screen;
+        let fit = Fit::new(self.screen, self.size, view.rotate);
+        let g = &view.glass;
         unsafe {
             gl.bind_vertex_array(Some(self.vao));
 
             // 1. Dots.
-            self.begin(self.dots, Some(&self.scene));
-            gl.uniform_2_f32(self.loc(self.dots, "u_screen").as_ref(), sw as f32, sh as f32);
-            gl.uniform_1_i32(self.loc(self.dots, "u_rotate").as_ref(), (rotate % 4) as i32);
-            gl.uniform_1_f32(self.loc(self.dots, "u_time").as_ref(), time);
-            let c = look.color;
-            gl.uniform_3_f32(self.loc(self.dots, "u_color").as_ref(), c[0], c[1], c[2]);
-            gl.uniform_1_f32(self.loc(self.dots, "u_progress").as_ref(), progress);
+            let p = self.dots;
+            self.begin(p, Some(&self.scene));
+            gl.uniform_2_f32(self.loc(p, "u_screen").as_ref(), sw as f32, sh as f32);
+            gl.uniform_1_i32(self.loc(p, "u_rotate").as_ref(), (view.rotate % 4) as i32);
+            gl.uniform_1_f32(self.loc(p, "u_time").as_ref(), view.time);
+            gl.uniform_1_f32(self.loc(p, "u_pitch").as_ref(), fit.pitch);
+            gl.uniform_2_f32(self.loc(p, "u_origin").as_ref(), fit.origin[0], fit.origin[1]);
+            gl.uniform_1_f32(self.loc(p, "u_progress").as_ref(), view.progress.unwrap_or(-1.0));
+            let c = view.look.color();
+            gl.uniform_3_f32(self.loc(p, "u_color").as_ref(), c[0], c[1], c[2]);
+            let palette: Vec<f32> = view.look.palette_steps().map_or(vec![0.0; 48], |p| p.iter().flatten().copied().collect());
+            gl.uniform_3_f32_slice(self.loc(p, "u_palette").as_ref(), &palette);
+            gl.uniform_1_f32(self.loc(p, "u_palette_weight").as_ref(), view.look.palette_weight());
+            for (name, v) in [
+                ("u_dot_size", g.dot_size),
+                ("u_roundness", g.roundness),
+                ("u_halo", g.halo),
+                ("u_halo_width", g.halo_width.max(0.01)),
+                ("u_unlit", g.unlit),
+                ("u_variation", g.variation),
+                ("u_flicker", g.flicker),
+                ("u_gamma", g.gamma),
+                ("u_hot_core", g.hot_core),
+            ] {
+                gl.uniform_1_f32(self.loc(p, name).as_ref(), v);
+            }
             self.bind_tex(0, self.frame_tex);
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
 
@@ -189,7 +276,7 @@ impl Renderer {
             self.begin(self.composite, out);
             gl.uniform_1_i32(self.loc(self.composite, "u_scene").as_ref(), 0);
             gl.uniform_1_i32(self.loc(self.composite, "u_bloom").as_ref(), 1);
-            gl.uniform_1_f32(self.loc(self.composite, "u_bloom_strength").as_ref(), BLOOM_STRENGTH);
+            gl.uniform_1_f32(self.loc(self.composite, "u_bloom_strength").as_ref(), g.bloom);
             self.bind_tex(0, self.scene.tex);
             self.bind_tex(1, self.bloom[0].tex);
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
@@ -296,5 +383,27 @@ unsafe fn link(gl: &glow::Context, dialect: Dialect, vert: &str, frag: &str) -> 
             gl.delete_shader(shader);
         }
         Ok(program)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn taps_land_on_the_right_dot_at_every_rotation() {
+        let size = Size::new(80, 32);
+        // A portrait screen with the panel turned a quarter, like the Pi.
+        for (screen, rotate) in [((800, 400), 0), ((400, 800), 1), ((800, 400), 2), ((400, 800), 3)] {
+            let fit = Fit::new(screen, size, rotate);
+            assert_eq!(fit.pitch, 10.0);
+            // The centre of the screen is the centre of the panel.
+            let (x, y) = fit.to_panel(screen, rotate, screen.0 as f32 / 2.0, screen.1 as f32 / 2.0);
+            assert_eq!((x, y), (40.0, 16.0), "rotate {rotate}");
+        }
+        // Rotated a quarter, the top of a portrait screen is the panel's right.
+        let fit = Fit::new((400, 800), size, 1);
+        let (x, _) = fit.to_panel((400, 800), 1, 200.0, 10.0);
+        assert!(x > 70.0);
     }
 }

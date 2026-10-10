@@ -6,6 +6,18 @@
 
 use crate::frame::{Frame, Rect};
 
+/// A pixel font. Each glyph is rows of '#' (lit) and '.' (off), all rows
+/// the same length; empty columns at the sides are trimmed, so the font is
+/// proportional. A character with no glyph is drawn as a space.
+///
+/// ```
+/// use glowdots::font::Font;
+/// static TINY: Font = Font::new(1, &[
+///     ('I', &["#", "#", "#"]),
+///     ('O', &["###", "#.#", "###"]),
+/// ]);
+/// assert_eq!(TINY.width("OI"), 5);
+/// ```
 pub struct Font {
     glyphs: &'static [(char, &'static [&'static str])],
     space: i32,
@@ -131,6 +143,16 @@ pub static REGULAR: Font = Font { space: 3, glyphs: &[
 ]};
 
 impl Font {
+    /// A font from its glyphs, and the width of a space in dots.
+    pub const fn new(space: i32, glyphs: &'static [(char, &'static [&'static str])]) -> Self {
+        Self { glyphs, space }
+    }
+
+    /// Height of the tallest glyph, in dots.
+    pub fn height(&self) -> i32 {
+        self.glyphs.iter().map(|(_, rows)| rows.len() as i32).max().unwrap_or(0)
+    }
+
     /// A glyph's rows, its first lit column, and its width.
     fn glyph(&self, c: char) -> Option<(&'static [&'static str], usize, usize)> {
         let rows = self.glyphs.iter().find(|(g, _)| *g == c)?.1;
@@ -202,7 +224,8 @@ impl Font {
 
     /// Draw text with its top-left at (x, y).
     pub fn draw(&self, f: &mut Frame, text: &str, x: i32, y: i32, level: u8) {
-        self.draw_clip(f, text, x, y, level, f.rect());
+        let clip = f.rect();
+        self.draw_clip(f, text, x, y, level, clip);
     }
 
     /// Draw text, but only inside `clip`.

@@ -1,14 +1,14 @@
 //! A tribute to the 1990s PC demoscene (Future Crew's Second Reality and
 //! friends): a short demo of classic effects, cut together with flashes.
 //!
-//! Parts: starfield with title cards, plasma, dot tunnel, and a 3D dot
-//! torus. (Fire under a sine-wave greetings scroller
+//! Parts: starfield with title cards (and, if you give it one, a flock of
+//! sprites flitting through), plasma, dot tunnel, and a 3D dot torus. (Fire under a sine-wave greetings scroller
 //! is written but out of the sequence for now; see `parts`.)
 
 use glowdots::art::{self, overlay_outlined};
 use glowdots::font::REGULAR;
 use glowdots::math::Rng;
-use glowdots::{Frame, MAX, Scene, Size, Transition};
+use glowdots::{Context, Frame, MAX, Scene, Size, Sprite, Transition};
 use std::f32::consts::{PI, TAU};
 
 const W: usize = crate::SIZE.w as usize;
@@ -32,6 +32,17 @@ fn shade(out: &mut Frame, x: usize, y: usize, v: f32) {
     art::shade(out, x as i32, y as i32, v);
 }
 
+/// A sprite flitting through the starfield.
+struct Flyer {
+    x: f32,
+    y: f32,
+    speed: f32,
+    amp: f32,
+    freq: f32,
+    phase: f32,
+    frames: [Sprite; 3],
+}
+
 struct Star {
     x: f32,
     y: f32,
@@ -40,6 +51,9 @@ struct Star {
 
 pub struct Demo {
     stars: Vec<Star>,
+    titles: [String; 3],
+    flock: Option<[Sprite; 3]>,
+    flyers: Vec<Flyer>,
     torus: Vec<[f32; 3]>,
     fire: Vec<f32>,
     fire_clock: f32,
@@ -65,12 +79,29 @@ impl Demo {
         }
         Self {
             stars: Vec::new(),
+            titles: ["GLOWDOTS".into(), "PRESENTS".into(), "DOTSCENE".into()],
+            flock: None,
+            flyers: Vec::new(),
             torus,
             fire: vec![0.0; W * (H + 2)],
             fire_clock: 0.0,
             scroller: REGULAR.columns(GREETINGS),
             rng: Rng(0xdead_beef),
         }
+    }
+
+    /// The three title cards over the starfield.
+    pub fn with_titles(mut self, titles: [&str; 3]) -> Self {
+        self.titles = titles.map(String::from);
+        self
+    }
+
+    /// A flock of five sprites that flit across the starfield, near ones
+    /// bright and fast, far ones dim. `frames` are a wing-beat: up, level,
+    /// down.
+    pub fn with_flock(mut self, frames: [Sprite; 3]) -> Self {
+        self.flock = Some(frames);
+        self
     }
 
     /// The demo, in order. To bring the fire back, add
@@ -122,11 +153,20 @@ impl Demo {
             out.set(x.round() as i32, y.round() as i32, level);
         }
 
+        // The flock flits across, near ones bright, far ones dim.
+        let span = W as f32 + 14.0;
+        for b in &self.flyers {
+            let x = (b.x + b.speed * t + 7.0).rem_euclid(span) - 7.0;
+            let y = b.y + (t * b.freq + b.phase).sin() * b.amp;
+            let k = ((t * 8.0 + b.phase * 3.0) as usize) % 4;
+            out.blit(&b.frames[[0, 1, 2, 1][k]], x.round() as i32, y.round() as i32);
+        }
+
         // Title cards.
         let card = match t {
-            t if (1.0..3.0).contains(&t) => Some("GLOWDOTS"),
-            t if (3.3..5.3).contains(&t) => Some("PRESENTS"),
-            t if t >= 5.6 => Some("DOTSCENE"),
+            t if (1.0..3.0).contains(&t) => Some(&self.titles[0]),
+            t if (3.3..5.3).contains(&t) => Some(&self.titles[1]),
+            t if t >= 5.6 => Some(&self.titles[2]),
             _ => None,
         };
         if let Some(text) = card {
@@ -265,12 +305,31 @@ impl Scene for Demo {
         "demo"
     }
 
-    fn enter(&mut self) {
+    fn enter(&mut self, _cx: &Context) {
         self.stars.clear();
+        self.flyers.clear();
+        if let Some(frames) = &self.flock {
+            for i in 0..5 {
+                let level = [1, 2, MAX][i % 3];
+                let dir = if i % 2 == 0 { 1.0 } else { -1.0 };
+                let flyer = Flyer {
+                    x: self.rng.range(-7.0, W as f32),
+                    y: self.rng.range(1.0, 26.0),
+                    // Near (bright) ones fly faster.
+                    speed: dir * self.rng.range(4.0, 6.0) * (1.0 + level as f32),
+                    amp: self.rng.range(1.0, 3.0),
+                    freq: self.rng.range(1.5, 3.0),
+                    phase: self.rng.range(0.0, TAU),
+                    frames: frames.clone().map(|s| s.capped(level)),
+                };
+                self.flyers.push(flyer);
+            }
+        }
         self.fire.fill(0.0);
     }
 
-    fn update(&mut self, dt: f32, t: f32, out: &mut Frame) {
+    fn update(&mut self, cx: &Context, out: &mut Frame) {
+        let (dt, t) = (cx.dt, cx.t);
         let mut local = t;
         let mut index = 0;
         let parts = self.parts();

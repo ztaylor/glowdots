@@ -3,7 +3,7 @@
 //! scrolls.
 
 use crate::font::{Font, SMALL};
-use crate::frame::{Frame, MAX, Rect};
+use crate::frame::{Frame, Rect};
 
 /// Rows 0..7 are the header bar. Content starts here.
 pub const CONTENT_TOP: i32 = 8;
@@ -13,17 +13,19 @@ const SCROLL_PAUSE: f32 = 1.0;
 
 /// A dim bar across the top with a bright label at each end.
 pub fn header(out: &mut Frame, left: &str, right: &str) {
-    out.fill(Rect::new(0, 0, out.w(), 7), 1);
-    SMALL.draw(out, left, 2, 1, MAX);
-    SMALL.draw_right(out, right, out.w() - 2, 1, MAX);
+    let (dim, bright) = (out.classic(1), out.max());
+    out.fill(Rect::new(0, 0, out.w(), 7), dim);
+    SMALL.draw(out, left, 2, 1, bright);
+    SMALL.draw_right(out, right, out.w() - 2, 1, bright);
 }
 
 /// Bright text on a dim box, like a DMD badge. (Dark text cut out of a
 /// lit box does not read: the glow fills the letters in.) Returns its width.
 pub fn chip(out: &mut Frame, text: &str, x: i32, y: i32) -> i32 {
     let w = SMALL.width(text) + 4;
-    out.fill(Rect::new(x, y, x + w, y + 7), 1);
-    SMALL.draw(out, text, x + 2, y + 1, MAX);
+    let (dim, bright) = (out.classic(1), out.max());
+    out.fill(Rect::new(x, y, x + w, y + 7), dim);
+    SMALL.draw(out, text, x + 2, y + 1, bright);
     w
 }
 
@@ -73,13 +75,17 @@ impl Pager {
 
 /// Slide the content rows up from `old` to `new` (p = 0..1).
 pub fn slide_up(out: &mut Frame, old: &Frame, new: &Frame, p: f32) {
+    debug_assert_eq!(out.size(), old.size());
     let h = out.h() - CONTENT_TOP;
     let shift = (crate::math::ease_in_out(p) * h as f32).round() as i32;
     for y in CONTENT_TOP..out.h() {
         let from_old = y + shift;
         for x in 0..out.w() {
-            let v = if from_old < out.h() { old.get(x, from_old) } else { new.get(x, from_old - h) };
-            out.set(x, y, v);
+            if from_old < out.h() {
+                out.copy_dot(old, x, from_old, x, y);
+            } else {
+                out.copy_dot(new, x, from_old - h, x, y);
+            }
         }
     }
 }

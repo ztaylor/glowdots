@@ -13,6 +13,12 @@ impl Rng {
         (self.0 >> 8) as f32 / (1 << 24) as f32
     }
 
+    /// A random 32-bit number.
+    pub fn next_u32(&mut self) -> u32 {
+        self.next_f32();
+        self.0
+    }
+
     pub fn range(&mut self, lo: f32, hi: f32) -> f32 {
         lo + (hi - lo) * self.next_f32()
     }

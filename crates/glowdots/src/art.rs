@@ -1,7 +1,7 @@
 //! Shared drawing for the art scenes: dithered shading, text with a dark
 //! outline, and sky objects (sun, moon, stars, clouds) and a wind arrow.
 
-use crate::frame::{Frame, MAX, Rect};
+use crate::frame::{Frame, Rect};
 use crate::math::hash;
 use std::f32::consts::TAU;
 
@@ -9,10 +9,11 @@ use std::f32::consts::TAU;
 /// small palette. It gives the 4 dot shades many more in-between steps.
 const BAYER: [[f32; 4]; 4] = [[0.0, 8.0, 2.0, 10.0], [12.0, 4.0, 14.0, 6.0], [3.0, 11.0, 1.0, 9.0], [15.0, 7.0, 13.0, 5.0]];
 
-/// Set a dot from a brightness 0..1, dithered.
+/// Set a dot from a brightness 0..1, dithered between the frame's shades.
 pub fn shade(out: &mut Frame, x: i32, y: i32, v: f32) {
+    let max = out.max() as f32;
     let b = (BAYER[y.rem_euclid(4) as usize][x.rem_euclid(4) as usize] + 0.5) / 16.0;
-    let level = (v.clamp(0.0, 1.0) * MAX as f32 + b - 0.5).round().clamp(0.0, MAX as f32);
+    let level = (v.clamp(0.0, 1.0) * max + b - 0.5).round().clamp(0.0, max);
     out.set(x, y, level as u8);
 }
 
@@ -53,14 +54,14 @@ pub fn sun(out: &mut Frame, cx: f32, cy: f32, r: f32, t: f32, clip: Rect) {
             let (dx, dy) = (x as f32 - cx, y as f32 - cy);
             let d = dx.hypot(dy);
             if d <= r {
-                set_in(out, clip, x, y, MAX);
+                set_in(out, clip, x, y, out.max());
             } else {
                 // 8 rays, each a narrow wedge; the ring of rays turns and pulses.
                 let a = dy.atan2(dx) + t * 0.4;
                 let wedge = ((a * 8.0 / TAU).fract() - 0.5).abs();
                 let reach = r + 3.0 + 1.2 * (t * 2.0).sin();
                 if d > r + 1.5 && d < reach && wedge > 0.38 {
-                    set_in(out, clip, x, y, 2);
+                    set_in(out, clip, x, y, out.classic(2));
                 }
             }
         }
@@ -80,9 +81,9 @@ pub fn moon(out: &mut Frame, cx: f32, cy: f32, r: f32, lit: f32, waxing: bool, c
             let half = (r * r - dy * dy).max(0.0).sqrt();
             let side = if waxing { dx } else { -dx };
             if side >= half * (1.0 - 2.0 * lit) - 0.3 {
-                set_in(out, clip, x, y, MAX);
+                set_in(out, clip, x, y, out.max());
             } else if lit < 0.35 {
-                set_in(out, clip, x, y, 1);
+                set_in(out, clip, x, y, out.classic(1));
             }
         }
     }
@@ -95,13 +96,13 @@ pub fn stars(out: &mut Frame, area: Rect, t: f32, density: f32) {
             let h = hash(x as u32 * 7 + 3, y as u32 * 13 + 1);
             if h < density {
                 let twinkle = hash(x as u32, y as u32 + (t * 3.0 + h * 50.0) as u32);
-                let level = if twinkle > 0.85 {
-                    MAX
+                let level = out.classic(if twinkle > 0.85 {
+                    3
                 } else if twinkle > 0.3 {
                     2
                 } else {
                     1
-                };
+                });
                 out.set(x, y, level);
             }
         }

@@ -5,7 +5,7 @@ use anyhow::Result;
 use chrono::Timelike;
 use glowdots::font::{REGULAR, SMALL};
 use glowdots::math::ease_in_out;
-use glowdots::{Frame, Rect, Scene, Size, Sprite, Transition};
+use glowdots::{Context, Frame, Rect, Scene, Size, Sprite, Transition};
 
 const DIGIT_W: i32 = 10;
 const COLON_W: i32 = 4;
@@ -61,12 +61,12 @@ impl Scene for Clock {
         "clock"
     }
 
-    fn enter(&mut self) {
+    fn enter(&mut self, _cx: &Context) {
         self.text.clear();
     }
 
-    fn update(&mut self, _dt: f32, t: f32, out: &mut Frame) {
-        let local = glowdots::time::now();
+    fn update(&mut self, cx: &Context, out: &mut Frame) {
+        let (t, local) = (cx.t, cx.now);
         let text: Vec<char> = local.format("%-I:%M").to_string().chars().collect();
 
         // Note which digits changed, so they can roll.
