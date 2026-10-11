@@ -4,11 +4,20 @@
 
 # glowdots
 
+[![CI](https://github.com/ztaylor/glowdots/actions/workflows/ci.yml/badge.svg)](https://github.com/ztaylor/glowdots/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/glowdots)](https://crates.io/crates/glowdots)
+[![docs.rs](https://img.shields.io/docsrs/glowdots)](https://docs.rs/glowdots)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 A 1990s pinball dot matrix display, for anything you want to show.
 
 glowdots draws the orange plasma display of the Williams, Bally, and Data East pinball machines of the 1990s: round dots in 4 shades, white-hot centers, a soft glow, and a quick afterglow. Write scenes in Rust, feed them JSON, and play them in a window, in a web page, or full screen on a Raspberry Pi.
 
 **[Try the live demo](https://ztaylor.github.io/glowdots/)**. It runs the real engine in your browser, compiled to WebAssembly. Change the glass, the color, and the time of day, or edit the JSON and watch the display follow.
+
+https://github.com/user-attachments/assets/f0b7fdbf-8823-4aef-813a-585f90afb7a7
+
+Every frame of this video, and its soundtrack, comes from glowdots itself (`cargo run --release --bin promo`).
 
 ## Scenes
 
