@@ -11,7 +11,7 @@
 
 A 1990s pinball dot matrix display, for anything you want to show.
 
-glowdots draws the orange plasma display of the Williams, Bally, and Data East pinball machines of the 1990s: round dots in 4 shades, white-hot centers, a soft glow, and a quick afterglow. Write scenes in Rust, feed them JSON, and play them in a window, in a web page, or full screen on a Raspberry Pi.
+glowdots recreates the orange plasma displays of the Williams, Bally, and Data East pinball machines of the 1990s. Every dot is drawn to look like them: round dots in 4 shades, bright centers, a soft halo, and a quick fade as they go dark. Write scenes in Rust, feed them JSON, and play them in a window, in a web page, or full screen on a Raspberry Pi.
 
 **[Try the live demo](https://ztaylor.github.io/glowdots/)**. It runs the real engine in your browser, compiled to WebAssembly. Change the glass, the color, and the time of day, or edit the JSON and watch the display follow.
 

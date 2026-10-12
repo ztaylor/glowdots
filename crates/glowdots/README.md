@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/ztaylor/glowdots/main/docs/media/hero.gif" width="720" alt="The word GLOWDOTS lights up in orange plasma dots over a starfield">
 
-A 1990s pinball dot matrix display engine. glowdots draws the orange plasma display of the Williams, Bally, and Data East pinball machines (round dots, white-hot centers, a soft glow, a quick afterglow) and gives you the parts to put anything on it: frames, sprites, pixel fonts, a deck of scenes with pinball transitions, and JSON feeds.
+A 1990s pinball dot matrix display engine. glowdots recreates the orange plasma displays of the Williams, Bally, and Data East pinball machines, every dot drawn to look like them (round dots in 4 shades, bright centers, a soft halo, and a quick fade as they go dark), and gives you the parts to put anything on it: frames, sprites, pixel fonts, a deck of scenes with pinball transitions, and JSON feeds.
 
 It plays in a desktop window, in a web page with WebGL 2, or full screen on a Raspberry Pi with no desktop. **[Try the live demo](https://ztaylor.github.io/glowdots/).**
 
