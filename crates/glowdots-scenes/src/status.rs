@@ -38,6 +38,33 @@ const LABEL_Y: i32 = 23;
 const LIGHT_Y: i32 = 29;
 const LAMP_TEST_SECONDS: f32 = 0.9;
 
+/// How the lights are laid out: the size of a light, the step from one to
+/// the next, how many rows a group stacks them in, and the gap between
+/// groups.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Lights {
+    w: i32,
+    h: i32,
+    step: i32,
+    rows: usize,
+    gap: i32,
+}
+
+impl Lights {
+    /// The width of `n` lights.
+    fn width(&self, n: usize) -> i32 {
+        n.div_ceil(self.rows) as i32 * self.step - (self.step - self.w)
+    }
+}
+
+/// From the biggest lights to the smallest. The first that fits across
+/// the panel is used, so many checks still fit.
+const LAYOUTS: [Lights; 3] = [
+    Lights { w: 2, h: 3, step: 3, rows: 1, gap: 5 },
+    Lights { w: 1, h: 3, step: 2, rows: 1, gap: 4 },
+    Lights { w: 1, h: 1, step: 2, rows: 2, gap: 4 },
+];
+
 #[derive(Deserialize, Default)]
 #[serde(default)]
 struct Report {
@@ -204,15 +231,25 @@ impl Status {
         }
     }
 
+    /// The biggest lights that fit, the width of each group, and the
+    /// width of them all.
+    fn layout(&self) -> (Lights, Vec<i32>, i32) {
+        let measure = |l: Lights| {
+            let widths: Vec<i32> = self.groups.iter().map(|g| SMALL.width(&g.label).max(l.width(g.lights.len()))).collect();
+            let total = widths.iter().sum::<i32>() + l.gap * (widths.len() as i32 - 1).max(0);
+            (l, widths, total)
+        };
+        LAYOUTS
+            .iter()
+            .map(|&l| measure(l))
+            .find(|(_, _, total)| *total <= WIDTH as i32 - 2)
+            .unwrap_or_else(|| measure(LAYOUTS[LAYOUTS.len() - 1]))
+    }
+
     /// SYSTEM, JOBS, FEEDS: a label over one light per check, each pair
     /// centred over the other.
     fn draw_groups(&self, out: &mut Frame, t: f32) {
-        const LIGHT_W: i32 = 2;
-        const STEP: i32 = 3;
-        let lights_w = |g: &Group| g.lights.len() as i32 * STEP - (STEP - LIGHT_W);
-        let widths: Vec<i32> = self.groups.iter().map(|g| SMALL.width(&g.label).max(lights_w(g))).collect();
-        let gap = 5;
-        let total: i32 = widths.iter().sum::<i32>() + gap * (widths.len() as i32 - 1).max(0);
+        let (lights, widths, total) = self.layout();
         let mut x = (WIDTH as i32 - total) / 2;
         let all_ok = self.overall == Level::Ok && self.pulse != Pulse::Flat;
         let count: usize = self.groups.iter().map(|g| g.lights.len()).sum();
@@ -225,7 +262,7 @@ impl Status {
         let mut n = 0;
         for (g, &w) in self.groups.iter().zip(&widths) {
             SMALL.draw(out, &g.label, x + (w - SMALL.width(&g.label)) / 2, LABEL_Y, 2);
-            let lights_x = x + (w - lights_w(g)) / 2;
+            let lights_x = x + (w - lights.width(g.lights.len())) / 2;
             for (i, &s) in g.lights.iter().enumerate() {
                 let lit_at = n as f32 / count.max(1) as f32 * LAMP_TEST_SECONDS;
                 let level = if t < lit_at {
@@ -252,11 +289,13 @@ impl Status {
                         }
                     }
                 };
-                let lx = lights_x + i as i32 * STEP;
-                out.fill(Rect::new(lx, LIGHT_Y, lx + LIGHT_W, LIGHT_Y + 3), level);
+                // Down each column, then across, so the lamp test runs left to right.
+                let lx = lights_x + (i / lights.rows) as i32 * lights.step;
+                let ly = LIGHT_Y + (i % lights.rows) as i32 * (lights.h + 1);
+                out.fill(Rect::new(lx, ly, lx + lights.w, ly + lights.h), level);
                 n += 1;
             }
-            x += w + gap;
+            x += w + lights.gap;
         }
     }
 }
@@ -355,3 +394,31 @@ impl Default for Status {
 const CHECK: [&str; 5] = ["    #", "   # ", "# #  ", " #   ", "     "];
 const WARN: [&str; 5] = ["#", "#", "#", " ", "#"];
 const CROSS: [&str; 5] = ["#   #", " # # ", "  #  ", " # # ", "#   #"];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn with_groups(sizes: &[(&str, usize)]) -> Status {
+        let mut s = Status::new();
+        s.groups = sizes.iter().map(|&(label, n)| Group { label: label.into(), lights: vec![Level::Ok; n] }).collect();
+        s
+    }
+
+    /// A few checks get the big lights.
+    #[test]
+    fn few_checks_get_big_lights() {
+        let (lights, _, total) = with_groups(&[("SYSTEM", 2), ("JOBS", 5), ("FEEDS", 4)]).layout();
+        assert_eq!(lights, LAYOUTS[0]);
+        assert!(total <= WIDTH as i32);
+    }
+
+    /// Many checks get smaller lights, and still fit on the panel.
+    #[test]
+    fn many_checks_fit() {
+        let (lights, widths, total) = with_groups(&[("SYSTEM", 2), ("JOBS", 16), ("FEEDS", 6)]).layout();
+        assert_ne!(lights, LAYOUTS[0]);
+        assert_eq!(widths.len(), 3);
+        assert!(total <= WIDTH as i32 - 2, "{total} dots wide");
+    }
+}

@@ -1,5 +1,9 @@
 # Changelog
 
+## glowdots-scenes 0.1.1
+
+- Status board: with many checks, the lights get smaller (and go in two rows) so that all groups fit on the panel.
+
 ## 0.1.0
 
 The first release.

@@ -13,7 +13,7 @@ homepage = "https://ztaylor.github.io/glowdots/"
 
 [workspace.dependencies]
 glowdots = { path = "crates/glowdots", version = "0.1.0", default-features = false }
-glowdots-scenes = { path = "crates/glowdots-scenes", version = "0.1.0" }
+glowdots-scenes = { path = "crates/glowdots-scenes", version = "0.1.1" }
 anyhow = "1.0"
 chrono = "0.4"
 image = { version = "0.25", default-features = false, features = ["png"] }
